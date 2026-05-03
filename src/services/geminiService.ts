@@ -78,17 +78,25 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
     });
     
     const text = result.text || "";
+    console.log("Gemini Response received, length:", text.length);
     
     const jsonMatch = text.match(/\[[\s\S]*\]/);
-    const questions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
+    if (!jsonMatch) {
+      throw new Error("Could not find valid JSON in Gemini response. Please try again!");
+    }
+    const questions = JSON.parse(jsonMatch[0]);
+    
+    console.log(`Successfully parsed ${questions.length} questions.`);
 
     // Save to Firestore for other users
     try {
       await setDoc(docRef, {
         date: today,
         questions: questions,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        generatedBy: 'sourav.9911rout@gmail.com'
       });
+      console.log("Successfully pushed 100 questions to Firestore! ❤️");
     } catch (error) {
       // Even if saving fails, we return the questions
       handleFirestoreError(error, OperationType.WRITE, `dailyTasks/${today}`);

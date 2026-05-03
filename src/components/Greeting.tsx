@@ -22,9 +22,11 @@ interface GreetingProps {
   isAdmin?: boolean;
   hasData?: boolean;
   onGenerate?: () => void;
+  onLogin?: () => void;
+  userEmail?: string | null;
 }
 
-export function Greeting({ onStart, isLoading, error, onRetry, isAdmin, hasData, onGenerate }: GreetingProps) {
+export function Greeting({ onStart, isLoading, error, onRetry, isAdmin, hasData, onGenerate, onLogin, userEmail }: GreetingProps) {
   const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
 
   const renderContent = () => {
@@ -36,7 +38,13 @@ export function Greeting({ onStart, isLoading, error, onRetry, isAdmin, hasData,
             transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
             className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full mb-4"
           />
-          <p className="text-pink-700 font-medium">Gemini is writing romantic lessons for you... 🌸</p>
+          <p className="text-pink-700 font-black text-xl mb-1">Your হনুমান Is Preparing Your Lesson... 🌸</p>
+          <p className="text-sm text-pink-400 mt-1 italic font-medium px-4">
+            Gemini is hand-crafting 100 new tasks special for you জান! ❤️
+          </p>
+          <p className="text-[10px] text-pink-300 mt-4 font-mono animate-pulse uppercase tracking-widest">
+            {isAdmin ? "Admin: Securely Fetching Lessons" : "Fetching Love Lessons"}...
+          </p>
         </div>
       );
     }
@@ -60,24 +68,36 @@ export function Greeting({ onStart, isLoading, error, onRetry, isAdmin, hasData,
     }
 
     if (!hasData) {
+      const isAuthAdmin = userEmail === 'sourav.9911rout@gmail.com';
       return (
         <>
           <GlassCard className="mb-8 border-white/40 p-5">
             <p className="text-base text-pink-900/80 leading-relaxed font-medium">
               {isAdmin 
-                ? "Sonai, today's lessons haven't been generated yet. Click below to create 100 romantic tasks! ❤️" 
+                ? (isAuthAdmin ? "Today's lessons are empty! Click below to create 100 tasks! ❤️" : "Sonai, please sign in to generate questions for your wife. ❤️") 
                 : "Today's Hindi lessons are being prepared by your husband. Please check back in a few minutes! 🥺❤️"}
             </p>
           </GlassCard>
           {isAdmin && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onGenerate}
-              className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-pink-500 text-white"
-            >
-              Generate Today's Lessons 🌸
-            </motion.button>
+            isAuthAdmin ? (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onGenerate}
+                className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-pink-500 text-white shadow-pink-200/50"
+              >
+                Generate 100 Lessons 🌸
+              </motion.button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onLogin}
+                className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-white"
+              >
+                Sign in with Google 🔑
+              </motion.button>
+            )
           )}
         </>
       );

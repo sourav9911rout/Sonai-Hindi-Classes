@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { BottomNav } from './components/BottomNav';
 import { Greeting } from './components/Greeting';
 import { QuizView } from './components/QuizView';
@@ -9,7 +11,7 @@ import { DailyData, QuizSet, AppProgress, AppSettings } from './types';
 import { StorageService } from './services/storageService';
 import { generateDailyQuestions } from './services/geminiService';
 import { getTodayDateString, shouldGenerateNewQuestions, cn, shuffleArray } from './lib/utils';
-import { PlayCircle, Trophy, History as HistoryIcon, Calendar, Sparkles, CheckCircle, ChevronRight, Settings as SettingsIcon, Trash2, Volume2, VolumeX, Heart } from 'lucide-react';
+import { PlayCircle, Trophy, History as HistoryIcon, Calendar, Sparkles, CheckCircle, ChevronRight, Settings as SettingsIcon, Trash2, Volume2, VolumeX, Heart, LogIn } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -19,55 +21,74 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(localStorage.getItem('is_admin') === 'true');
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(localStorage.getItem('is_admin') === 'true');
   const [adminClickCount, setAdminClickCount] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
   
   // Game State
   const [activeQuizSet, setActiveQuizSet] = useState<QuizSet | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
 
-  const initData = useCallback(async (forceGenerate = false) => {
-    const existingLocal = StorageService.getDailyData();
-    const today = getTodayDateString();
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    // 1. Check if we need new questions
-    if (shouldGenerateNewQuestions(existingLocal?.date || null) || forceGenerate) {
-      setIsLoading(true);
-      try {
-        setLoadError(null);
-        // This will now check Firestore first inside generateDailyQuestions
-        const questions = await generateDailyQuestions(forceGenerate && isAdmin);
-        
-        if (!questions || questions.length === 0) {
-          // If no questions found and we are not admin/didn't generate
-          setDailyData(null);
-          return;
-        }
-
-        const shuffledQuestions = shuffleArray(questions);
-        const sets: QuizSet[] = [];
-        for (let i = 0; i < 4; i++) {
-          sets.push({
-            id: `Set ${i + 1}`,
-            questions: shuffledQuestions.slice(i * 25, (i + 1) * 25),
-            isCompleted: false,
-            score: 0
-          });
-        }
-        const newData: DailyData = { date: today, sets };
-        StorageService.setDailyData(newData);
-        setDailyData(newData);
-      } catch (err) {
-        console.error("Failed to fetch questions", err);
-        setLoadError("Failed to fetch today's questions. Please wait for your husband to generate them! ❤️");
-      } finally {
-        setIsLoading(false);
-      }
-    } else if (existingLocal) {
-      setDailyData(existingLocal);
+  const login = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      console.error("Login failed", err);
     }
-  }, [isAdmin]);
+  };
+
+  const initData = useCallback(async (forceGenerate = false) => {
+    const today = getTodayDateString();
+    setLoadError(null);
+
+    const isVerifiedAdmin = user?.email === 'sourav.9911rout@gmail.com';
+
+    setIsLoading(true);
+    try {
+      const questions = await generateDailyQuestions(forceGenerate && isVerifiedAdmin);
+      
+      if (!questions || questions.length === 0) {
+        setDailyData(null);
+        if (!forceGenerate) {
+          setLoadError("Today's lessons aren't ready yet. Please wait for your husband! ❤️");
+        }
+        return;
+      }
+
+      const shuffledQuestions = shuffleArray(questions);
+      const sets: QuizSet[] = [];
+      const count = shuffledQuestions.length;
+      const questionsPerSet = Math.max(1, Math.floor(count / 4));
+
+      for (let i = 0; i < 4; i++) {
+        sets.push({
+          id: `set-${i + 1}`,
+          questions: shuffledQuestions.slice(i * questionsPerSet, (i + 1) * questionsPerSet),
+          isCompleted: false,
+          score: 0
+        });
+      }
+
+      const newData: DailyData = { date: today, sets };
+      StorageService.setDailyData(newData);
+      setDailyData(newData);
+    } catch (err) {
+      console.error("Failed to fetch questions", err);
+      setLoadError("Something went wrong. Please check your connection or try again! ❤️");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   const toggleAdmin = () => {
     const next = adminClickCount + 1;
@@ -75,7 +96,7 @@ export default function App() {
       const secret = prompt("Enter secret key to enable Admin Mode:");
       if (secret && secret.toLowerCase().trim() === "sonai") {
         localStorage.setItem('is_admin', 'true');
-        setIsAdmin(true);
+        setIsAdminMode(true);
         alert("Admin Mode Enabled! You can now generate daily questions for everyone. ❤️");
       }
       setAdminClickCount(0);
@@ -143,9 +164,11 @@ export default function App() {
               isLoading={isLoading} 
               error={loadError}
               onRetry={() => initData(false)}
-              isAdmin={isAdmin}
+              isAdmin={isAdminMode}
               hasData={!!dailyData}
               onGenerate={() => initData(true)}
+              onLogin={login}
+              userEmail={user?.email || null}
             />
             
             <GlassCard className="mt-8 pink-gradient text-white">
@@ -190,7 +213,7 @@ export default function App() {
         return (
           <div className="px-6 py-8 pb-32 transition-all">
             <h1 className="text-2xl font-bold text-pink-900 mb-2">Practice Time 🌸</h1>
-            <p className="text-pink-800/60 font-medium text-sm mb-6">Generated by Gemini for My Queen</p>
+            <p className="text-pink-800/60 font-medium text-sm mb-6">Prepared by Your হনুমান for His Queen ❤️</p>
             
             <div className="grid gap-4">
               {dailyData?.sets.map((set, idx) => (
@@ -328,22 +351,58 @@ export default function App() {
             </h1>
 
             <div className="space-y-6">
-              {isAdmin && (
+              {isAdminMode && (
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Daily Content (Admin)</h3>
                   <GlassCard className="p-0">
-                    <button
-                      onClick={() => {
-                        if (confirm("Refresh today's questions using Gemini? ❤️")) {
-                          initData(true);
-                        }
-                      }}
-                      className="flex items-center gap-3 w-full p-4 text-pink-600 hover:bg-pink-50 transition-colors rounded-3xl"
-                    >
-                      <Sparkles size={20} />
-                      <span className="font-bold">Regenerate Today's Questions</span>
-                    </button>
+                    <div className="divide-y divide-gray-100">
+                      {!user ? (
+                        <button
+                          onClick={login}
+                          className="flex items-center gap-3 w-full p-4 text-pink-600 hover:bg-pink-50 transition-colors"
+                        >
+                          <LogIn size={20} />
+                          <span className="font-bold text-left">Login to Generate Questions</span>
+                        </button>
+                      ) : user.email !== 'sourav.9911rout@gmail.com' ? (
+                        <div className="p-4 text-red-500 text-sm italic">
+                          Signed in as {user.email}. Only your husband can generate questions! ❤️
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (confirm("Push 100 new questions to the database? ❤️")) {
+                              initData(true);
+                            }
+                          }}
+                          disabled={isLoading}
+                          className="flex items-center gap-3 w-full p-4 text-pink-600 hover:bg-pink-50 transition-colors"
+                        >
+                          <Sparkles size={20} className={isLoading ? "animate-spin" : ""} />
+                          <span className="font-bold text-left">
+                            {isLoading ? "Generating 100 questions..." : "Force Regenerate 100 Questions"}
+                          </span>
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem('is_admin');
+                          setIsAdminMode(false);
+                          window.location.reload();
+                        }}
+                        className="flex items-center gap-3 w-full p-4 text-gray-500 hover:bg-gray-50 transition-colors"
+                      >
+                        <SettingsIcon size={20} />
+                        <span className="font-bold text-left">Exit Admin Mode</span>
+                      </button>
+                    </div>
                   </GlassCard>
+                  {user && user.email === 'sourav.9911rout@gmail.com' && (
+                    <p className="text-[10px] text-pink-400 px-2 italic">
+                      Verified Admin Account: {user.email} 🔒
+                    </p>
+                  )}
                 </section>
               )}
 
@@ -385,7 +444,7 @@ export default function App() {
           </div>
           <span className="font-display font-black text-lg tracking-tight text-pink-900">
             Sonai's <span className="text-pink-600">Pathshala</span>
-            {isAdmin && <span className="ml-1 text-[8px] text-pink-400 font-bold uppercase tracking-tighter">Admin</span>}
+            {isAdminMode && <span className="ml-1 text-[8px] text-pink-400 font-bold uppercase tracking-tighter">Admin</span>}
           </span>
         </div>
         <div className="flex items-center gap-2 bg-white/40 px-2 py-1 rounded-full backdrop-blur-md border border-white/30 shadow-sm">
