@@ -18,6 +18,7 @@ export default function App() {
   const [progress, setProgress] = useState<AppProgress>(StorageService.getProgress());
   const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Game State
   const [activeQuizSet, setActiveQuizSet] = useState<QuizSet | null>(null);
@@ -31,6 +32,7 @@ export default function App() {
     if (shouldGenerateNewQuestions(existing?.date || null)) {
       setIsLoading(true);
       try {
+        setLoadError(null);
         const rawQuestions = await generateDailyQuestions();
         const questions = shuffleArray(rawQuestions);
         const sets: QuizSet[] = [];
@@ -47,6 +49,7 @@ export default function App() {
         setDailyData(newData);
       } catch (err) {
         console.error("Failed to generate questions", err);
+        setLoadError("Failed to generate today's questions. Please check your internet or API key and try again! ❤️");
       } finally {
         setIsLoading(false);
       }
@@ -119,7 +122,12 @@ export default function App() {
       case 'home':
         return (
           <div className="px-6 py-6 pb-24">
-            <Greeting onStart={() => setActiveTab('practice')} isLoading={isLoading} />
+            <Greeting 
+              onStart={() => setActiveTab('practice')} 
+              isLoading={isLoading} 
+              error={loadError}
+              onRetry={initData}
+            />
             
             <GlassCard className="mt-8 pink-gradient text-white">
               <div className="flex items-center gap-4 mb-4">

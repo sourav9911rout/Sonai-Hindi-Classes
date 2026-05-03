@@ -17,9 +17,11 @@ const greetings = [
 interface GreetingProps {
   onStart: () => void;
   isLoading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-export function Greeting({ onStart, isLoading }: GreetingProps) {
+export function Greeting({ onStart, isLoading, error, onRetry }: GreetingProps) {
   const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
 
   return (
@@ -31,7 +33,7 @@ export function Greeting({ onStart, isLoading }: GreetingProps) {
         className="mb-8"
       >
         <div className="w-24 h-24 bg-white/60 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg border border-white animate-pulse">
-          🌸
+          {error ? "🥺" : "🌸"}
         </div>
       </motion.div>
 
@@ -52,32 +54,45 @@ export function Greeting({ onStart, isLoading }: GreetingProps) {
       >
         <GlassCard className="mb-8 border-white/40 p-5">
           <p className="text-base text-pink-900/80 leading-relaxed font-medium">
-            কেমন আছো? <br/> আজকের Hindi practice এর জন্যে ready তো? তাহলে নিচের বাটন এ ক্লিক করে আজকের 1st test start করো।
+            {error ? error : "কেমন আছো? আজকের Hindi practice এর জন্যে ready তো? তাহলে নিচের বাটন এ ক্লিক করে আজকের 1st test start করো।"}
           </p>
         </GlassCard>
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={onStart}
-          disabled={isLoading}
-          className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          {isLoading ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-              className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
-            />
-          ) : null}
-          I love হনুমান 🐵
-        </motion.button>
+        {error ? (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onRetry}
+            className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-red-500/20"
+          >
+            Retry Generation ❤️
+          </motion.button>
+        ) : (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onStart}
+            disabled={isLoading}
+            className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            {isLoading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
+              />
+            ) : null}
+            I love হনুমান 🐵
+          </motion.button>
+        )}
         
-        {isLoading ? (
+        {isLoading && (
           <p className="mt-4 text-pink-700/60 text-sm animate-pulse font-medium">
             Gemini is preparing your romantic lessons... 🌸
           </p>
-        ) : (
+        )}
+        
+        {!isLoading && !error && (
           <p className="mt-6 text-pink-700/60 text-sm italic font-medium">
             “My Sonai is improving everyday ❤️”
           </p>

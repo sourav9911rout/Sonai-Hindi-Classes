@@ -1,7 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { Question } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const apiKey = process.env.GEMINI_API_KEY;
+
+if (!apiKey) {
+  console.error("GEMINI_API_KEY is not defined. Please add it to your environment variables (e.g., in Vercel settings).");
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_KEY" });
 
 export async function generateDailyQuestions(): Promise<Question[]> {
   const prompt = `
