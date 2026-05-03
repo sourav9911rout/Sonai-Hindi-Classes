@@ -1,0 +1,6 @@
+{
+  "name": "Sonai's Hindi Pathshala",
+  "description": "A romantic, mobile-first Hindi learning app featuring daily AI-generated quizzes, streaks, and a beautiful pink apple-style UI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI_POWERED", "OFFLINE_SUPPORT"]
+}
