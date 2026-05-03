@@ -40,21 +40,49 @@ export default function App() {
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
+    // Force prompt to ensure the account picker shows up if needed
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
+      setLoadError(null);
+      setIsLoading(true);
       await signInWithPopup(auth, provider);
-    } catch (err) {
+      console.log("Login successful!");
+    } catch (err: any) {
       console.error("Login failed", err);
+      if (err.code === 'auth/popup-blocked') {
+        alert("Pop-up blocked! Please allow pop-ups for this site or try opening it in a new tab. ❤️");
+        setLoadError("Check your browser settings to allow pop-ups! 🥺");
+      } else if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, no need to show a scary error
+        setLoadError(null);
+      } else if (err.code === 'auth/unauthorized-domain') {
+        alert("Domain not authorized! Please add this domain to your Firebase Authorized Domains list. 🔒");
+        setLoadError("This domain needs to be authorized in Firebase Console. 🔒");
+      } else {
+        setLoadError("Login failed: " + (err.message || "Unknown error"));
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const initData = useCallback(async (forceGenerate = false) => {
     const today = getTodayDateString();
-    setLoadError(null);
+    const localData = StorageService.getDailyData();
 
+    // If we have local data for today and we aren't forcing a refresh, just use it
+    if (localData && localData.date === today && !forceGenerate) {
+      setDailyData(localData);
+      return;
+    }
+
+    setLoadError(null);
     const isVerifiedAdmin = user?.email === 'sourav.9911rout@gmail.com';
 
     setIsLoading(true);
     try {
+      // generateDailyQuestions handles checking Firestore if forceGenerate is false
       const questions = await generateDailyQuestions(forceGenerate && isVerifiedAdmin);
       
       if (!questions || questions.length === 0) {
@@ -68,15 +96,22 @@ export default function App() {
       const shuffledQuestions = shuffleArray(questions);
       const sets: QuizSet[] = [];
       const count = shuffledQuestions.length;
-      const questionsPerSet = Math.max(1, Math.floor(count / 4));
+      
+      // Split into 4 roughly equal sets
+      const questionsPerSet = Math.ceil(count / 4);
 
       for (let i = 0; i < 4; i++) {
-        sets.push({
-          id: `set-${i + 1}`,
-          questions: shuffledQuestions.slice(i * questionsPerSet, (i + 1) * questionsPerSet),
-          isCompleted: false,
-          score: 0
-        });
+        const start = i * questionsPerSet;
+        const end = Math.min(start + questionsPerSet, count);
+        
+        if (start < count) {
+          sets.push({
+            id: `Set ${i + 1}`,
+            questions: shuffledQuestions.slice(start, end),
+            isCompleted: false,
+            score: 0
+          });
+        }
       }
 
       const newData: DailyData = { date: today, sets };
@@ -199,10 +234,8 @@ export default function App() {
                   <p className="text-xl font-black text-pink-900">{dailyData?.sets.filter(s => s.isCompleted).length || 0}/4</p>
                 </GlassCard>
                 <GlassCard className="bg-white/30 backdrop-blur-lg p-3 border border-white/20">
-                  <p className="text-[9px] uppercase tracking-wider text-pink-800/60 font-bold mb-1">Accuracy</p>
-                  <p className="text-xl font-black text-pink-900">
-                    {progress.history.length > 0 ? Math.round(progress.history[0].accuracy) : 0}%
-                  </p>
+                  <p className="text-[9px] uppercase tracking-wider text-pink-800/60 font-bold mb-1">Total Lessons</p>
+                  <p className="text-xl font-black text-pink-900">{dailyData?.sets.reduce((acc, s) => acc + s.questions.length, 0) || 0}</p>
                 </GlassCard>
               </div>
             </div>
@@ -246,7 +279,7 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         {set.isCompleted ? (
                           <div className="text-right">
-                            <span className="block font-black text-pink-600">{set.score}/25</span>
+                            <span className="block font-black text-pink-600">{set.score}/{set.questions.length}</span>
                           </div>
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-500">

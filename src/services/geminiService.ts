@@ -41,18 +41,18 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
   const prompt = `
     Generate EXACTLY 100 romantic and beginner-friendly Hindi learning MCQ questions for a wife from her husband.
     
-    Structure:
-    - 20 Questions: Bengali to Hindi translation
-    - 20 Questions: English to Hindi translation
-    - 20 Questions: Hindi Vocabulary (Visual/Contextual)
+    Structure (MANDATORY 100 QUESTIONS):
+    - 20 Questions: Bengali to Hindi translation (Bengali -> Hindi)
+    - 20 Questions: English to Hindi translation (English -> Hindi)
+    - 20 Questions: Hindi Vocabulary (Contextual)
     - 20 Questions: Beginner Grammar (Gender/Verbs)
     - 20 Questions: Daily Romantic Conversations
     
     CRITICAL SCRIPT REQUIREMENT: 
-    - ALL Hindi MUST be in DEVANAGARI (हिन्दी). NO ROMANIZED HINDI (no "Tum", use "तुम").
+    - ALL Hindi MUST be in DEVANAGARI (हिन्दी). NO ROMANIZED HINDI.
     - Bengali must be in Bengali script.
     
-    JSON Structure (Return ONLY a raw JSON array):
+    JSON Structure (Return ONLY a raw JSON array, no markdown blocks):
     [
       {
         "id": "q1",
@@ -62,6 +62,7 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
         "explanation": "Cute/Romantic mix of Bengali, Hindi(Devanagari) and English. 🌸",
         "category": "BengaliToHindi"
       }
+      ... up to q100
     ]
     
     Tone: Deeply romantic, encouraging, and sweet. Make her feel like a Queen.
@@ -69,11 +70,11 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
 
   try {
     const result = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Flash is better for high-volume generation
+      model: "gemini-1.5-flash", 
       contents: prompt,
       config: {
-        temperature: 0.8,
-        maxOutputTokens: 8192,
+        temperature: 0.85,
+        maxOutputTokens: 8192, // Increased safety for large output
       }
     });
     

@@ -48,7 +48,8 @@ export const StorageService = {
 
     // Check for streak update
     const allCompleted = daily.sets.every(s => s.isCompleted);
-    const allHighScored = daily.sets.every(s => (s.score / 25) >= 0.9);
+    // Use the actual question count for the high score check
+    const allHighScored = daily.sets.every(s => (s.score / s.questions.length) >= 0.85);
 
     if (allCompleted && allHighScored) {
       this.updateStreak();

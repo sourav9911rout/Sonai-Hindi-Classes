@@ -40,7 +40,7 @@ export function Greeting({ onStart, isLoading, error, onRetry, isAdmin, hasData,
           />
           <p className="text-pink-700 font-black text-xl mb-1">Your হনুমান Is Preparing Your Lesson... 🌸</p>
           <p className="text-sm text-pink-400 mt-1 italic font-medium px-4">
-            Gemini is hand-crafting 100 new tasks special for you জান! ❤️
+            Your হনুমান is hand-crafting 100 new tasks special for you জান! ❤️
           </p>
           <p className="text-[10px] text-pink-300 mt-4 font-mono animate-pulse uppercase tracking-widest">
             {isAdmin ? "Admin: Securely Fetching Lessons" : "Fetching Love Lessons"}...
@@ -89,14 +89,19 @@ export function Greeting({ onStart, isLoading, error, onRetry, isAdmin, hasData,
                 Generate 100 Lessons 🌸
               </motion.button>
             ) : (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onLogin}
-                className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-white"
-              >
-                Sign in with Google 🔑
-              </motion.button>
+              <div className="space-y-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onLogin}
+                  className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-white border-2 border-pink-100 shadow-sm"
+                >
+                  Sign in with Google 🔑
+                </motion.button>
+                <p className="text-[10px] text-pink-400 italic">
+                  Note: If the sign-in window doesn't open, please check if your browser blocked pop-ups or try opening in a new tab! ❤️
+                </p>
+              </div>
             )
           )}
         </>
