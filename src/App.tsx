@@ -21,16 +21,18 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isAdminMode, setIsAdminMode] = useState<boolean>(localStorage.getItem('is_admin') === 'true');
   const [customApiKey, setCustomApiKey] = useState<string>(StorageService.getCustomApiKey() || '');
-  const [adminClickCount, setAdminClickCount] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   
   // Game State
   const [activeQuizSet, setActiveQuizSet] = useState<QuizSet | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
-
+ 
+  const isVerifiedAdmin = user?.email === 'sourav.9911rout@gmail.com';
+  const hasCustomKey = !!customApiKey && customApiKey.trim().length > 10;
+  const showAdminUI = isVerifiedAdmin || hasCustomKey;
+ 
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -79,12 +81,12 @@ export default function App() {
     }
 
     setLoadError(null);
-    const isVerifiedAdmin = user?.email === 'sourav.9911rout@gmail.com';
+    const isActuallyAdmin = user?.email === 'sourav.9911rout@gmail.com' || (!!customApiKey && customApiKey.length > 10);
 
     setIsLoading(true);
     try {
       // generateDailyQuestions handles checking Firestore if forceGenerate is false
-      const questions = await generateDailyQuestions(forceGenerate && isVerifiedAdmin);
+      const questions = await generateDailyQuestions(forceGenerate && isActuallyAdmin);
       
       if (!questions || questions.length === 0) {
         setDailyData(null);
@@ -127,18 +129,7 @@ export default function App() {
   }, [user]);
 
   const toggleAdmin = () => {
-    const next = adminClickCount + 1;
-    if (next >= 5) {
-      const secret = prompt("Enter secret key to enable Admin Mode:");
-      if (secret && secret.toLowerCase().trim() === "sonai") {
-        localStorage.setItem('is_admin', 'true');
-        setIsAdminMode(true);
-        alert("Admin Mode Enabled! You can now generate daily questions for everyone. ❤️");
-      }
-      setAdminClickCount(0);
-    } else {
-      setAdminClickCount(next);
-    }
+    // No-op
   };
 
   useEffect(() => {
@@ -200,11 +191,17 @@ export default function App() {
               isLoading={isLoading} 
               error={loadError}
               onRetry={() => initData(false)}
-              isAdmin={isAdminMode}
+              isAdmin={showAdminUI}
               hasData={!!dailyData}
               onGenerate={() => initData(true)}
               onLogin={login}
               userEmail={user?.email || null}
+              hasCustomKey={hasCustomKey}
+              customApiKey={customApiKey}
+              onApiKeyChange={(key) => {
+                setCustomApiKey(key);
+                StorageService.setCustomApiKey(key);
+              }}
             />
             
             <GlassCard className="mt-8 pink-gradient text-white">
@@ -389,7 +386,7 @@ export default function App() {
             </h1>
 
             <div className="space-y-6">
-              {isAdminMode && (
+              {showAdminUI && (
                 <section className="space-y-3">
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Daily Content (Admin)</h3>
                   <GlassCard className="p-0">
@@ -452,14 +449,14 @@ export default function App() {
                       
                       <button
                         onClick={() => {
-                          localStorage.removeItem('is_admin');
-                          setIsAdminMode(false);
-                          window.location.reload();
+                          setCustomApiKey('');
+                          StorageService.setCustomApiKey(null);
+                          alert("API Key cleared! ❤️");
                         }}
                         className="flex items-center gap-3 w-full p-4 text-gray-500 hover:bg-gray-50 transition-colors"
                       >
                         <SettingsIcon size={20} />
-                        <span className="font-bold text-left">Exit Admin Mode</span>
+                        <span className="font-bold text-left">Clear Saved API Key</span>
                       </button>
                     </div>
                   </GlassCard>
@@ -502,14 +499,13 @@ export default function App() {
       <header className="sticky top-0 z-50 glass backdrop-blur-3xl border-none px-6 py-4 flex justify-between items-center transition-all">
         <div 
           className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
-          onClick={toggleAdmin}
         >
           <div className="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center overflow-hidden shadow-lg border border-white/20">
             <Heart size={16} className="text-white fill-white" />
           </div>
           <span className="font-display font-black text-lg tracking-tight text-pink-900">
             Sonai's <span className="text-pink-600">Pathshala</span>
-            {isAdminMode && <span className="ml-1 text-[8px] text-pink-400 font-bold uppercase tracking-tighter">Admin</span>}
+            {showAdminUI && <span className="ml-1 text-[8px] text-pink-400 font-bold uppercase tracking-tighter">Admin</span>}
           </span>
         </div>
         <div className="flex items-center gap-2 bg-white/40 px-2 py-1 rounded-full backdrop-blur-md border border-white/30 shadow-sm">
