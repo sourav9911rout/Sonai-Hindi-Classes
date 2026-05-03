@@ -73,10 +73,10 @@ export default function App() {
     const next = adminClickCount + 1;
     if (next >= 5) {
       const secret = prompt("Enter secret key to enable Admin Mode:");
-      if (secret === "sonai") {
+      if (secret && secret.toLowerCase().trim() === "sonai") {
         localStorage.setItem('is_admin', 'true');
         setIsAdmin(true);
-        alert("Admin Mode Enabled! You can now generate daily questions. ❤️");
+        alert("Admin Mode Enabled! You can now generate daily questions for everyone. ❤️");
       }
       setAdminClickCount(0);
     } else {

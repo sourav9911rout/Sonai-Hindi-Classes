@@ -12,19 +12,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'sourav.9911rout@gmail.com' && request.auth.token.email_verified == true;
     }
 
-    function isValidQuestion(q) {
-      return q.keys().hasAll(['id', 'question', 'options', 'correctAnswer', 'explanation', 'category'])
-          && q.id is string
-          && q.question is string
-          && q.options is list
-          && q.options.size() == 4
-          && q.correctAnswer is string
-          && q.explanation is string
-          && q.category is string;
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function isValidDailyTasks(data) {
@@ -33,8 +26,7 @@ service cloud.firestore {
           && data.date is string
           && data.date.size() == 10
           && data.questions is list
-          && data.questions.size() > 0
-          && data.createdAt == request.time;
+          && data.questions.size() > 0;
     }
 
     // Daily Tasks collection
@@ -42,12 +34,12 @@ service cloud.firestore {
       // Anyone can read the daily tasks
       allow get, list: if true;
 
-      // Allow creation if it doesn't exist and matches the schema
+      // Allow creation/update if admin OR if it matches schema (initial creation)
       allow create: if isValidDailyTasks(request.resource.data)
                     && date == request.resource.data.date;
       
-      // No updates or deletes allowed to keep it consistent for everyone
-      allow update, delete: if false;
+      allow update: if isAdmin() && isValidDailyTasks(request.resource.data);
+      allow delete: if isAdmin();
     }
   }
 }

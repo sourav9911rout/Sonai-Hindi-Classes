@@ -17,63 +17,67 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
 
   try {
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
+    // If questions exist and we ARE NOT forcing generation, return them.
+    // If we ARE forcing generation, we skip this and generate new ones.
+    if (docSnap.exists() && !forceGenerate) {
       return docSnap.data().questions;
     }
   } catch (error) {
     console.error("Firestore read failed", error);
   }
 
-  // If we reach here, questions don't exist in Firestore
+  // If we reach here: 
+  // 1. Questions don't exist in Firestore 
+  // 2. OR forceGenerate is true (Admin clicked Generate)
   if (!forceGenerate) {
-    return []; // Return empty if not authorized to generate
+    // If we are just a regular user and there's no data, we can't generate.
+    return []; 
+  }
+
+  if (!apiKey || apiKey === "MISSING_KEY") {
+    throw new Error("GEMINI_API_KEY is missing. Please add it to your Vercel Environment Variables.");
   }
 
   const prompt = `
-    Generate 100 romantic and beginner-friendly Hindi learning questions for a wife from her husband.
-    The questions should be split into 6 categories:
-    1. Bengali to Hindi translation (Bengali question -> Hindi options in Devanagari)
-    2. English to Hindi translation (English question -> Hindi options in Devanagari)
-    3. Hindi vocabulary (Word in Devanagari -> meaning)
-    4. Beginner Hindi grammar (Gender, plural, basic verbs in Devanagari)
-    5. Simple Hindi sentence translation
-    6. Daily conversational Hindi
-
-    CRITICAL SCRIPT REQUIREMENT (STRICTEST): 
-    - ALL Hindi words, phrases, and sentences MUST be written in DEVANAGARI SCRIPT (हिन्दी लिपि). 
-    - DO NOT EVER use English letters to write Hindi (no "Aanken", no "Pyaar", no "Tum"). 
-    - Use "आँखें", "प्याর", "तुम" etc.
-    - If a Hindi word is used in a question, an option, or the explanation, it MUST be in Devanagari script.
-    - Bengali words must be in Bengali script.
-    - Only use English for English-to-Hindi tasks or general instructions in the explanation.
-    - Ensure PERFECT grammar and spelling in all languages (English, Bengali, and Hindi).
-    - Absolutely NO grammatical errors in the "explanation" field.
-
-    Each question must be an MCQ with 4 options.
-    Format the output as a valid JSON array of objects with this structure:
-    {
-      "id": "unique_id_string",
-      "question": "The question text",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-      "correctAnswer": "The exact string from the options array that is correct",
-      "explanation": "A short, cute, and romantic explanation using a mix of Bengali, Hindi (in Devanagari), and English. DO NOT use only English. For example: 'Beautiful choice জান! এর মানে হলো 'I love you' ❤️'",
-      "category": "One of: BengaliToHindi, EnglishToHindi, Vocabulary, Grammar, Sentence, Conversation"
-    }
-
-    The tone should be cute, romantic, and encouraging. Return ONLY the JSON array.
-    Important: Generate exactly 100 questions.
+    Generate EXACTLY 100 romantic and beginner-friendly Hindi learning MCQ questions for a wife from her husband.
+    
+    Structure:
+    - 20 Questions: Bengali to Hindi translation
+    - 20 Questions: English to Hindi translation
+    - 20 Questions: Hindi Vocabulary (Visual/Contextual)
+    - 20 Questions: Beginner Grammar (Gender/Verbs)
+    - 20 Questions: Daily Romantic Conversations
+    
+    CRITICAL SCRIPT REQUIREMENT: 
+    - ALL Hindi MUST be in DEVANAGARI (हिन्दी). NO ROMANIZED HINDI (no "Tum", use "तुम").
+    - Bengali must be in Bengali script.
+    
+    JSON Structure (Return ONLY a raw JSON array):
+    [
+      {
+        "id": "q1",
+        "question": "Question text...",
+        "options": ["A", "B", "C", "D"],
+        "correctAnswer": "Exact string from options",
+        "explanation": "Cute/Romantic mix of Bengali, Hindi(Devanagari) and English. 🌸",
+        "category": "BengaliToHindi"
+      }
+    ]
+    
+    Tone: Deeply romantic, encouraging, and sweet. Make her feel like a Queen.
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const result = await ai.models.generateContent({
+      model: "gemini-1.5-flash", // Flash is better for high-volume generation
       contents: prompt,
       config: {
-        temperature: 0.7,
+        temperature: 0.8,
+        maxOutputTokens: 8192,
       }
     });
     
-    const text = response.text || "";
+    const text = result.text || "";
     
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     const questions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
