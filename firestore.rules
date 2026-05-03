@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidQuestion(q) {
+      return q.keys().hasAll(['id', 'question', 'options', 'correctAnswer', 'explanation', 'category'])
+          && q.id is string
+          && q.question is string
+          && q.options is list
+          && q.options.size() == 4
+          && q.correctAnswer is string
+          && q.explanation is string
+          && q.category is string;
+    }
+
+    function isValidDailyTasks(data) {
+      return data.keys().hasAll(['date', 'questions', 'createdAt'])
+          && data.keys().size() == 3
+          && data.date is string
+          && data.date.size() == 10
+          && data.questions is list
+          && data.questions.size() > 0
+          && data.createdAt == request.time;
+    }
+
+    // Daily Tasks collection
+    match /dailyTasks/{date} {
+      // Anyone can read the daily tasks
+      allow get, list: if true;
+
+      // Allow creation if it doesn't exist and matches the schema
+      allow create: if isValidDailyTasks(request.resource.data)
+                    && date == request.resource.data.date;
+      
+      // No updates or deletes allowed to keep it consistent for everyone
+      allow update, delete: if false;
+    }
+  }
+}

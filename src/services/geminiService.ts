@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { Question } from "../types";
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -10,8 +12,20 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_KEY" });
 
 export async function generateDailyQuestions(): Promise<Question[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const docRef = doc(db, 'dailyTasks', today);
+
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data().questions;
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `dailyTasks/${today}`);
+  }
+
   const prompt = `
-    Generate 100 romantic and beginner-friendly Hindi learning questions for a wife from her husband.
+    Generate 15 romantic and beginner-friendly Hindi learning questions for a wife from her husband.
     The questions should be split into 6 categories:
     1. Bengali to Hindi translation (Bengali question -> Hindi options in Devanagari)
     2. English to Hindi translation (English question -> Hindi options in Devanagari)
@@ -37,7 +51,7 @@ export async function generateDailyQuestions(): Promise<Question[]> {
       "question": "The question text",
       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
       "correctAnswer": "The exact string from the options array that is correct",
-      "explanation": "A short, cute, and romantic explanation in Bengali or English",
+      "explanation": "A short, cute, and romantic explanation using a mix of Bengali, Hindi (in Devanagari), and English. DO NOT use only English.",
       "category": "One of: BengaliToHindi, EnglishToHindi, Vocabulary, Grammar, Sentence, Conversation"
     }
 
@@ -52,12 +66,22 @@ export async function generateDailyQuestions(): Promise<Question[]> {
     
     const text = response.text || "";
     
-    // Extract JSON from markdown if necessary
     const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+    const questions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
+
+    // Save to Firestore for other users
+    try {
+      await setDoc(docRef, {
+        date: today,
+        questions: questions,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      // Even if saving fails, we return the questions
+      handleFirestoreError(error, OperationType.WRITE, `dailyTasks/${today}`);
     }
-    return JSON.parse(text);
+
+    return questions;
   } catch (error) {
     console.error("Error generating questions:", error);
     throw error;

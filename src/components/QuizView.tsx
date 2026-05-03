@@ -12,16 +12,16 @@ interface QuizViewProps {
 }
 
 const motivationalMessages = [
-  "I love you ❤️",
-  "My বুবু পারবে 💕",
+  "I love you ❤️ (मै तुमसे बहुत प्यार करता हूँ)",
+  "My বুবু পারবে 💕 आप कर सकते हैं!",
   "তুমি gopu এর mummy na 🤭💖",
-  "Proud of you জান ❤️",
-  "Hindi Queen 👑",
-  "আমার বউ তো smart 😘",
-  "তুমি পারবেই 🌸",
+  "Proud of you জান ❤️ (मुझे तुम पर गर्व है)",
+  "Hindi Queen 👑 (हिंदी की रानी)",
+  "আমার বউ তো smart 😘 (मेरी पत्नी बहुत स्मार्ट है)",
+  "তুমি পারবেই 🌸 (तुम ज़रूर करोगी)",
   "হনুমান তোমার উপর proud 🐵❤️",
-  "My Sonai is improving everyday ❤️",
-  "Keep going আমার জান 💖"
+  "Sonai is improving everyday ❤️",
+  "Keep going জান 💖 (बस आगे बढ़ते रहो जान)"
 ];
 
 export function QuizView({ quizSet, onComplete }: QuizViewProps) {

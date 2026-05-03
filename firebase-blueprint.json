@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "Question": {
+      "title": "Question",
+      "description": "A single language learning question",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correctAnswer": { "type": "string" },
+        "explanation": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "question", "options", "correctAnswer", "explanation", "category"]
+    },
+    "DailyTasks": {
+      "title": "Daily Tasks",
+      "description": "Collection of questions for a specific day",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "questions": { "type": "array", "$ref": "#/entities/Question" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "questions", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/dailyTasks/{date}": {
+      "schema": "DailyTasks",
+      "description": "Stores the generated questions for each day"
+    }
+  }
+}
