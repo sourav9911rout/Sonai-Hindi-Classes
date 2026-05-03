@@ -230,8 +230,12 @@ export default function App() {
               </h2>
               <div className="grid grid-cols-2 gap-3">
                 <GlassCard className="bg-white/30 backdrop-blur-lg p-3 border border-white/20">
-                  <p className="text-[9px] uppercase tracking-wider text-pink-800/60 font-bold mb-1">Sets Today</p>
-                  <p className="text-xl font-black text-pink-900">{dailyData?.sets.filter(s => s.isCompleted).length || 0}/4</p>
+                  <p className="text-[9px] uppercase tracking-wider text-pink-800/60 font-bold mb-1">Accuracy Today</p>
+                  <p className="text-xl font-black text-pink-900">
+                    {progress.history.length > 0 && progress.history[0].date === getTodayDateString() 
+                      ? Math.round(progress.history[0].accuracy) 
+                      : 0}%
+                  </p>
                 </GlassCard>
                 <GlassCard className="bg-white/30 backdrop-blur-lg p-3 border border-white/20">
                   <p className="text-[9px] uppercase tracking-wider text-pink-800/60 font-bold mb-1">Total Lessons</p>

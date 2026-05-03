@@ -52,17 +52,17 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
     - ALL Hindi MUST be in DEVANAGARI (हिन्दी). NO ROMANIZED HINDI.
     - Bengali must be in Bengali script.
     
-    JSON Structure (Return ONLY a raw JSON array, no markdown blocks):
+    JSON Structure (Return ONLY a raw JSON array, MUST be exactly 100 items):
     [
       {
         "id": "q1",
         "question": "Question text...",
         "options": ["A", "B", "C", "D"],
-        "correctAnswer": "Exact string from options",
-        "explanation": "Cute/Romantic mix of Bengali, Hindi(Devanagari) and English. 🌸",
+        "correctAnswer": "Answer text exactly as in options",
+        "explanation": "Cute/Romantic note. ❤️",
         "category": "BengaliToHindi"
       }
-      ... up to q100
+      ... continue to q100
     ]
     
     Tone: Deeply romantic, encouraging, and sweet. Make her feel like a Queen.
