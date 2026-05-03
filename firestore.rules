@@ -22,7 +22,7 @@ service cloud.firestore {
 
     function isValidDailyTasks(data) {
       return data.keys().hasAll(['date', 'questions', 'createdAt'])
-          && data.keys().size() == 3
+          && data.keys().size() <= 4
           && data.date is string
           && data.date.size() == 10
           && data.questions is list

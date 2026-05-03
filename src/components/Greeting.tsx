@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './ui/GlassCard';
 import { Heart } from 'lucide-react';
@@ -28,6 +29,7 @@ interface GreetingProps {
   hasCustomKey?: boolean;
   customApiKey?: string;
   onApiKeyChange?: (key: string) => void;
+  onManualImport?: (json: string) => Promise<void>;
 }
 
 export function Greeting({ 
@@ -42,11 +44,26 @@ export function Greeting({
   userEmail, 
   hasCustomKey,
   customApiKey,
-  onApiKeyChange 
+  onApiKeyChange,
+  onManualImport
 }: GreetingProps) {
   const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
   const isVerifiedAdmin = userEmail === 'sourav.9911rout@gmail.com';
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualText, setManualText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
+  const handleManualImport = async () => {
+    if (!manualText.trim() || !onManualImport) return;
+    setIsImporting(true);
+    try {
+      await onManualImport(manualText);
+      setManualText('');
+      setShowManualInput(false);
+    } finally {
+      setIsImporting(false);
+    }
+  };
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -58,7 +75,7 @@ export function Greeting({
           />
           <p className="text-pink-700 font-black text-xl mb-1">Your হনুমান Is Preparing Your Lesson... 🌸</p>
           <p className="text-sm text-pink-400 mt-1 italic font-medium px-4">
-            Your হনুমান is hand-crafting 100 new tasks special for you জান! ❤️
+            Your হনুমান is hand-crafting 25 new tasks special for you জান! ❤️
           </p>
           <p className="text-[10px] text-pink-300 mt-4 font-mono animate-pulse uppercase tracking-widest">
             {hasCustomKey ? "Generating Using Custom API Key..." : "Fetching Love Lessons..."}
@@ -114,7 +131,7 @@ export function Greeting({
           <GlassCard className="border-white/40 p-5">
             <p className="text-base text-pink-900/80 leading-relaxed font-medium">
               {isActuallyAdmin 
-                ? "Sonai, today's lessons are empty! Enter your key below or sign in to generate 100 tasks. ❤️" 
+                ? "Sonai, today's lessons are empty! Enter your key below or sign in to generate 25 tasks. ❤️" 
                 : "Today's Hindi lessons are being prepared by your husband. Please check back in a few minutes! 🥺❤️"}
             </p>
           </GlassCard>
@@ -155,6 +172,43 @@ export function Greeting({
           </div>
         )}
 
+        {(isActuallyAdmin || isVerifiedAdmin) && (
+          <div className="pt-2">
+            {!showManualInput ? (
+              <button 
+                onClick={() => setShowManualInput(true)}
+                className="text-[10px] font-bold text-pink-400 uppercase tracking-widest hover:text-pink-600 transition-colors"
+              >
+                + Paste JSON from AI Studio
+              </button>
+            ) : (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                <textarea
+                  placeholder="Paste your 25 questions JSON here..."
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value)}
+                  className="w-full h-32 bg-white/50 border-2 border-pink-100 rounded-xl p-3 text-[10px] font-mono focus:outline-none focus:border-pink-300"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleManualImport}
+                    disabled={isImporting || !manualText.trim()}
+                    className="flex-grow bg-pink-500 text-white font-bold py-2 rounded-xl text-xs hover:bg-pink-600 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isImporting ? "Sharing..." : "Share Globally 🚀"}
+                  </button>
+                  <button
+                    onClick={() => setShowManualInput(false)}
+                    className="px-4 py-2 text-xs font-bold text-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {isActuallyAdmin ? (
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -162,7 +216,7 @@ export function Greeting({
             onClick={onGenerate}
             className="frosted-btn w-full py-5 px-8 text-xl flex items-center justify-center gap-3 bg-pink-500 text-white shadow-lg shadow-pink-200/50"
           >
-            {hasData ? "Refresh 100 Lessons 🌸" : "Generate 100 Lessons 🌸"}
+            {hasData ? "Refresh 25 Lessons 🌸" : "Generate 25 Lessons 🌸"}
           </motion.button>
         ) : (
           <div className="space-y-3">

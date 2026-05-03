@@ -9,9 +9,9 @@ import { SummaryView } from './components/SummaryView';
 import { GlassCard } from './components/ui/GlassCard';
 import { DailyData, QuizSet, AppProgress, AppSettings } from './types';
 import { StorageService } from './services/storageService';
-import { generateDailyQuestions } from './services/geminiService';
+import { generateDailyQuestions, manualSaveQuestions } from './services/geminiService';
 import { getTodayDateString, shouldGenerateNewQuestions, cn, shuffleArray } from './lib/utils';
-import { PlayCircle, Trophy, History as HistoryIcon, Calendar, Sparkles, CheckCircle, ChevronRight, Settings as SettingsIcon, Trash2, Volume2, VolumeX, Heart, LogIn } from 'lucide-react';
+import { PlayCircle, Trophy, History as HistoryIcon, Calendar, Sparkles, CheckCircle, ChevronRight, Settings as SettingsIcon, Trash2, Volume2, VolumeX, Heart, LogIn, FileJson } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -21,7 +21,10 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(localStorage.getItem('is_admin') === 'true');
   const [customApiKey, setCustomApiKey] = useState<string>(StorageService.getCustomApiKey() || '');
+  const [manualJson, setManualJson] = useState<string>('');
+  const [isImporting, setIsImporting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   
   // Game State
@@ -40,6 +43,26 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleManualImport = async (overrideJson?: string) => {
+    const jsonToUse = overrideJson || manualJson;
+    if (!jsonToUse.trim()) return;
+    
+    setIsImporting(true);
+    try {
+      const qData = JSON.parse(jsonToUse);
+      if (!Array.isArray(qData)) throw new Error("JSON must be an array of questions!");
+      
+      await manualSaveQuestions(qData);
+      alert("Success! 25 questions have been shared globally! ❤️");
+      setManualJson('');
+      initData(false);
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
@@ -120,9 +143,9 @@ export default function App() {
       const newData: DailyData = { date: today, sets };
       StorageService.setDailyData(newData);
       setDailyData(newData);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch questions", err);
-      setLoadError("Something went wrong. Please check your connection or try again! ❤️");
+      setLoadError(err.message || "Something went wrong. Please check your connection or try again! ❤️");
     } finally {
       setIsLoading(false);
     }
@@ -201,6 +224,9 @@ export default function App() {
               onApiKeyChange={(key) => {
                 setCustomApiKey(key);
                 StorageService.setCustomApiKey(key);
+              }}
+              onManualImport={async (json) => {
+                await handleManualImport(json);
               }}
             />
             
@@ -406,7 +432,7 @@ export default function App() {
                       ) : (
                         <button
                           onClick={() => {
-                            if (confirm("Push 100 new questions to the database? ❤️")) {
+                            if (confirm("Push 25 new questions to the database? ❤️")) {
                               initData(true);
                             }
                           }}
@@ -415,7 +441,7 @@ export default function App() {
                         >
                           <Sparkles size={20} className={isLoading ? "animate-spin" : ""} />
                           <span className="font-bold text-left">
-                            {isLoading ? "Generating 100 questions..." : "Force Regenerate 100 Questions"}
+                            {isLoading ? "Generating 25 questions..." : "Force Regenerate 25 Questions"}
                           </span>
                         </button>
                       )}
@@ -443,7 +469,30 @@ export default function App() {
                           </button>
                         </div>
                         <p className="mt-2 text-[9px] text-pink-400 leading-tight">
-                          Adding your own key helps ensure 100 questions are generated without limits. Get one for free at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">AI Studio</a>.
+                          Adding your own key helps ensure 25 questions are generated without limits. Get one for free at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">AI Studio</a>.
+                        </p>
+                      </div>
+
+                      <div className="p-4 border-t border-pink-100 bg-white/40">
+                        <label className="block text-[10px] font-bold text-pink-500 uppercase mb-2 tracking-widest px-1">
+                          Manual JSON Import (Share Globally)
+                        </label>
+                        <textarea
+                          placeholder="Paste JSON array here..."
+                          value={manualJson}
+                          onChange={(e) => setManualJson(e.target.value)}
+                          className="w-full h-24 bg-white border-2 border-pink-100 rounded-xl p-2 text-[10px] font-mono focus:outline-none focus:border-pink-300 transition-all mb-2"
+                        />
+                        <button
+                          onClick={handleManualImport}
+                          disabled={isImporting || !manualJson.trim()}
+                          className="w-full bg-pink-600 text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-pink-700 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          {isImporting ? <Sparkles size={14} className="animate-spin" /> : <FileJson size={14} />}
+                          Push Questions to Firestore 🚀
+                        </button>
+                        <p className="mt-2 text-[8px] text-pink-400 italic">
+                          Paste 25 questions from AI Studio. This saves them for everyone today! ❤️
                         </p>
                       </div>
                       
