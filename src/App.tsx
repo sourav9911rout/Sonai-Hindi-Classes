@@ -22,6 +22,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState<boolean>(localStorage.getItem('is_admin') === 'true');
+  const [customApiKey, setCustomApiKey] = useState<string>(StorageService.getCustomApiKey() || '');
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   
@@ -421,6 +422,33 @@ export default function App() {
                           </span>
                         </button>
                       )}
+
+                      <div className="p-4 bg-pink-50/50">
+                        <label className="block text-[10px] font-bold text-pink-500 uppercase mb-2 tracking-widest px-1">
+                          Custom Gemini API Key
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            placeholder="Paste your API key here..."
+                            value={customApiKey}
+                            onChange={(e) => setCustomApiKey(e.target.value)}
+                            className="bg-white border-2 border-pink-100 rounded-xl px-3 py-2 text-xs w-full focus:outline-none focus:border-pink-300 transition-colors"
+                          />
+                          <button
+                            onClick={() => {
+                              StorageService.setCustomApiKey(customApiKey);
+                              alert("API Key saved locally! ❤️");
+                            }}
+                            className="bg-pink-500 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-pink-600 active:scale-95 transition-all"
+                          >
+                            Save
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[9px] text-pink-400 leading-tight">
+                          Adding your own key helps ensure 100 questions are generated without limits. Get one for free at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">AI Studio</a>.
+                        </p>
+                      </div>
                       
                       <button
                         onClick={() => {

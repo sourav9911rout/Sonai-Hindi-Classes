@@ -2,14 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { Question } from "../types";
-
-const apiKey = process.env.GEMINI_API_KEY;
-
-if (!apiKey) {
-  console.error("GEMINI_API_KEY is not defined. Please add it to your environment variables (e.g., in Vercel settings).");
-}
-
-const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_KEY" });
+import { StorageService } from "./storageService";
 
 export async function generateDailyQuestions(forceGenerate = false): Promise<Question[]> {
   const today = new Date().toISOString().split('T')[0];
@@ -17,8 +10,6 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
 
   try {
     const docSnap = await getDoc(docRef);
-    // If questions exist and we ARE NOT forcing generation, return them.
-    // If we ARE forcing generation, we skip this and generate new ones.
     if (docSnap.exists() && !forceGenerate) {
       return docSnap.data().questions;
     }
@@ -26,18 +17,21 @@ export async function generateDailyQuestions(forceGenerate = false): Promise<Que
     console.error("Firestore read failed", error);
   }
 
-  // If we reach here: 
-  // 1. Questions don't exist in Firestore 
-  // 2. OR forceGenerate is true (Admin clicked Generate)
   if (!forceGenerate) {
-    // If we are just a regular user and there's no data, we can't generate.
     return []; 
   }
 
-  if (!apiKey || apiKey === "MISSING_KEY") {
-    throw new Error("GEMINI_API_KEY is missing. Please add it to your Vercel Environment Variables.");
+  // Determine which API key to use
+  const customKey = StorageService.getCustomApiKey();
+  const envKey = process.env.GEMINI_API_KEY;
+  const activeKey = customKey || envKey;
+
+  if (!activeKey) {
+    throw new Error("Gemini API Key is missing. Please add your own key in Admin Settings! ❤️");
   }
 
+  const ai = new GoogleGenAI({ apiKey: activeKey });
+  
   const prompt = `
     Generate EXACTLY 100 romantic and beginner-friendly Hindi learning MCQ questions for a wife from her husband.
     

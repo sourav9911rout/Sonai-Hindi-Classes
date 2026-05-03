@@ -5,9 +5,22 @@ const STORAGE_KEYS = {
   DAILY_DATA: 'sonai_hindi_daily',
   PROGRESS: 'sonai_hindi_progress',
   SETTINGS: 'sonai_hindi_settings',
+  CUSTOM_API_KEY: 'sonai_hindi_custom_api_key',
 };
 
 export const StorageService = {
+  getCustomApiKey(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.CUSTOM_API_KEY);
+  },
+
+  setCustomApiKey(key: string | null) {
+    if (key) {
+      localStorage.setItem(STORAGE_KEYS.CUSTOM_API_KEY, key);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CUSTOM_API_KEY);
+    }
+  },
+
   getDailyData(): DailyData | null {
     const data = localStorage.getItem(STORAGE_KEYS.DAILY_DATA);
     return data ? JSON.parse(data) : null;
