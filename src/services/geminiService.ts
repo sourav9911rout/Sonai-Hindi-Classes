@@ -25,7 +25,7 @@ export async function generateDailyQuestions(): Promise<Question[]> {
   }
 
   const prompt = `
-    Generate 15 romantic and beginner-friendly Hindi learning questions for a wife from her husband.
+    Generate 100 romantic and beginner-friendly Hindi learning questions for a wife from her husband.
     The questions should be split into 6 categories:
     1. Bengali to Hindi translation (Bengali question -> Hindi options in Devanagari)
     2. English to Hindi translation (English question -> Hindi options in Devanagari)
@@ -37,7 +37,7 @@ export async function generateDailyQuestions(): Promise<Question[]> {
     CRITICAL SCRIPT REQUIREMENT (STRICTEST): 
     - ALL Hindi words, phrases, and sentences MUST be written in DEVANAGARI SCRIPT (हिन्दी लिपि). 
     - DO NOT EVER use English letters to write Hindi (no "Aanken", no "Pyaar", no "Tum"). 
-    - Use "आँखें", "प्यार", "तुम" etc.
+    - Use "आँखें", "प्याর", "तुम" etc.
     - If a Hindi word is used in a question, an option, or the explanation, it MUST be in Devanagari script.
     - Bengali words must be in Bengali script.
     - Only use English for English-to-Hindi tasks or general instructions in the explanation.
@@ -51,17 +51,21 @@ export async function generateDailyQuestions(): Promise<Question[]> {
       "question": "The question text",
       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
       "correctAnswer": "The exact string from the options array that is correct",
-      "explanation": "A short, cute, and romantic explanation using a mix of Bengali, Hindi (in Devanagari), and English. DO NOT use only English.",
+      "explanation": "A short, cute, and romantic explanation using a mix of Bengali, Hindi (in Devanagari), and English. DO NOT use only English. For example: 'Beautiful choice জান! এর মানে হলো 'I love you' ❤️'",
       "category": "One of: BengaliToHindi, EnglishToHindi, Vocabulary, Grammar, Sentence, Conversation"
     }
 
     The tone should be cute, romantic, and encouraging. Return ONLY the JSON array.
+    Important: Generate exactly 100 questions.
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
+      config: {
+        temperature: 0.7,
+      }
     });
     
     const text = response.text || "";

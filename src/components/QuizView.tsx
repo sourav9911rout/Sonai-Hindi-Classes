@@ -21,7 +21,11 @@ const motivationalMessages = [
   "তুমি পারবেই 🌸 (तुम ज़रूर करोगी)",
   "হনুমান তোমার উপর proud 🐵❤️",
   "Sonai is improving everyday ❤️",
-  "Keep going জান 💖 (बस आगे बढ़ते रहो जान)"
+  "Keep going জান 💖 (बस आगे बढ़ते रहो जान)",
+  "জান তুমি খুব ভালো করছ! 🌟 (तुम बहुत अच्छा कर रही हो!)",
+  "আমার বুবু তো হিরোইন 🌸 (मेरी बुबू तो हीरोइन है)",
+  "Love you সোনাই 😘 (लव यू सोनाई)",
+  "তুমি Hindi শিখে যাবে জান ❤️ (तुम हिंदी सीख जाओगी জান)"
 ];
 
 export function QuizView({ quizSet, onComplete }: QuizViewProps) {
