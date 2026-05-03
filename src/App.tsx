@@ -19,27 +19,38 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(localStorage.getItem('is_admin') === 'true');
+  const [adminClickCount, setAdminClickCount] = useState(0);
   
   // Game State
   const [activeQuizSet, setActiveQuizSet] = useState<QuizSet | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
 
-  const initData = useCallback(async () => {
-    const existing = StorageService.getDailyData();
+  const initData = useCallback(async (forceGenerate = false) => {
+    const existingLocal = StorageService.getDailyData();
     const today = getTodayDateString();
 
-    if (shouldGenerateNewQuestions(existing?.date || null)) {
+    // 1. Check if we need new questions
+    if (shouldGenerateNewQuestions(existingLocal?.date || null) || forceGenerate) {
       setIsLoading(true);
       try {
         setLoadError(null);
-        const rawQuestions = await generateDailyQuestions();
-        const questions = shuffleArray(rawQuestions);
+        // This will now check Firestore first inside generateDailyQuestions
+        const questions = await generateDailyQuestions(forceGenerate && isAdmin);
+        
+        if (!questions || questions.length === 0) {
+          // If no questions found and we are not admin/didn't generate
+          setDailyData(null);
+          return;
+        }
+
+        const shuffledQuestions = shuffleArray(questions);
         const sets: QuizSet[] = [];
         for (let i = 0; i < 4; i++) {
           sets.push({
             id: `Set ${i + 1}`,
-            questions: questions.slice(i * 25, (i + 1) * 25),
+            questions: shuffledQuestions.slice(i * 25, (i + 1) * 25),
             isCompleted: false,
             score: 0
           });
@@ -48,25 +59,30 @@ export default function App() {
         StorageService.setDailyData(newData);
         setDailyData(newData);
       } catch (err) {
-        console.error("Failed to generate questions", err);
-        setLoadError("Failed to generate today's questions. Please check your internet or API key and try again! ❤️");
+        console.error("Failed to fetch questions", err);
+        setLoadError("Failed to fetch today's questions. Please wait for your husband to generate them! ❤️");
       } finally {
         setIsLoading(false);
       }
-    } else {
-      if (existing) {
-        // Shuffle questions within each set for a fresh feel on every open
-        const shuffledSets = existing.sets.map(set => ({
-          ...set,
-          questions: shuffleArray(set.questions.map(q => ({
-            ...q,
-            options: shuffleArray(q.options)
-          })))
-        }));
-        setDailyData({ ...existing, sets: shuffledSets });
-      }
+    } else if (existingLocal) {
+      setDailyData(existingLocal);
     }
-  }, []);
+  }, [isAdmin]);
+
+  const toggleAdmin = () => {
+    const next = adminClickCount + 1;
+    if (next >= 5) {
+      const secret = prompt("Enter secret key to enable Admin Mode:");
+      if (secret === "sonai") {
+        localStorage.setItem('is_admin', 'true');
+        setIsAdmin(true);
+        alert("Admin Mode Enabled! You can now generate daily questions. ❤️");
+      }
+      setAdminClickCount(0);
+    } else {
+      setAdminClickCount(next);
+    }
+  };
 
   useEffect(() => {
     initData();
@@ -126,7 +142,10 @@ export default function App() {
               onStart={() => setActiveTab('practice')} 
               isLoading={isLoading} 
               error={loadError}
-              onRetry={initData}
+              onRetry={() => initData(false)}
+              isAdmin={isAdmin}
+              hasData={!!dailyData}
+              onGenerate={() => initData(true)}
             />
             
             <GlassCard className="mt-8 pink-gradient text-white">
@@ -309,23 +328,24 @@ export default function App() {
             </h1>
 
             <div className="space-y-6">
-              <section className="space-y-3">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Daily Content</h3>
-                <GlassCard className="p-0">
-                  <button
-                    onClick={() => {
-                      if (confirm("Refresh today's questions? This will generate new ones now! ❤️")) {
-                        StorageService.setDailyData(null as any);
-                        window.location.reload();
-                      }
-                    }}
-                    className="flex items-center gap-3 w-full p-4 text-pink-600 hover:bg-pink-50 transition-colors rounded-3xl"
-                  >
-                    <Sparkles size={20} />
-                    <span className="font-bold">Refresh Daily Questions</span>
-                  </button>
-                </GlassCard>
-              </section>
+              {isAdmin && (
+                <section className="space-y-3">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Daily Content (Admin)</h3>
+                  <GlassCard className="p-0">
+                    <button
+                      onClick={() => {
+                        if (confirm("Refresh today's questions using Gemini? ❤️")) {
+                          initData(true);
+                        }
+                      }}
+                      className="flex items-center gap-3 w-full p-4 text-pink-600 hover:bg-pink-50 transition-colors rounded-3xl"
+                    >
+                      <Sparkles size={20} />
+                      <span className="font-bold">Regenerate Today's Questions</span>
+                    </button>
+                  </GlassCard>
+                </section>
+              )}
 
               <section className="space-y-3">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Dangerous Zone</h3>
@@ -356,12 +376,16 @@ export default function App() {
   return (
     <div className="min-h-screen transition-all duration-500 pb-16 text-pink-900">
       <header className="sticky top-0 z-50 glass backdrop-blur-3xl border-none px-6 py-4 flex justify-between items-center transition-all">
-        <div className="flex items-center gap-2">
+        <div 
+          className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+          onClick={toggleAdmin}
+        >
           <div className="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center overflow-hidden shadow-lg border border-white/20">
             <Heart size={16} className="text-white fill-white" />
           </div>
           <span className="font-display font-black text-lg tracking-tight text-pink-900">
             Sonai's <span className="text-pink-600">Pathshala</span>
+            {isAdmin && <span className="ml-1 text-[8px] text-pink-400 font-bold uppercase tracking-tighter">Admin</span>}
           </span>
         </div>
         <div className="flex items-center gap-2 bg-white/40 px-2 py-1 rounded-full backdrop-blur-md border border-white/30 shadow-sm">

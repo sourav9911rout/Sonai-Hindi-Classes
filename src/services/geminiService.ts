@@ -11,7 +11,7 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_KEY" });
 
-export async function generateDailyQuestions(): Promise<Question[]> {
+export async function generateDailyQuestions(forceGenerate = false): Promise<Question[]> {
   const today = new Date().toISOString().split('T')[0];
   const docRef = doc(db, 'dailyTasks', today);
 
@@ -21,7 +21,12 @@ export async function generateDailyQuestions(): Promise<Question[]> {
       return docSnap.data().questions;
     }
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `dailyTasks/${today}`);
+    console.error("Firestore read failed", error);
+  }
+
+  // If we reach here, questions don't exist in Firestore
+  if (!forceGenerate) {
+    return []; // Return empty if not authorized to generate
   }
 
   const prompt = `
