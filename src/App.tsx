@@ -8,7 +8,7 @@ import { GlassCard } from './components/ui/GlassCard';
 import { DailyData, QuizSet, AppProgress, AppSettings } from './types';
 import { StorageService } from './services/storageService';
 import { generateDailyQuestions } from './services/geminiService';
-import { getTodayDateString, shouldGenerateNewQuestions, cn } from './lib/utils';
+import { getTodayDateString, shouldGenerateNewQuestions, cn, shuffleArray } from './lib/utils';
 import { PlayCircle, Trophy, History as HistoryIcon, Calendar, Sparkles, CheckCircle, ChevronRight, Settings as SettingsIcon, Trash2, Volume2, VolumeX, Heart } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -31,7 +31,8 @@ export default function App() {
     if (shouldGenerateNewQuestions(existing?.date || null)) {
       setIsLoading(true);
       try {
-        const questions = await generateDailyQuestions();
+        const rawQuestions = await generateDailyQuestions();
+        const questions = shuffleArray(rawQuestions);
         const sets: QuizSet[] = [];
         for (let i = 0; i < 4; i++) {
           sets.push({
@@ -50,7 +51,17 @@ export default function App() {
         setIsLoading(false);
       }
     } else {
-      setDailyData(existing);
+      if (existing) {
+        // Shuffle questions within each set for a fresh feel on every open
+        const shuffledSets = existing.sets.map(set => ({
+          ...set,
+          questions: shuffleArray(set.questions.map(q => ({
+            ...q,
+            options: shuffleArray(q.options)
+          })))
+        }));
+        setDailyData({ ...existing, sets: shuffledSets });
+      }
     }
   }, []);
 
@@ -291,30 +302,20 @@ export default function App() {
 
             <div className="space-y-6">
               <section className="space-y-3">
-                <h3 className="text-xs font-bold text-pink-800/60 uppercase tracking-widest px-2">Preference</h3>
-                <GlassCard className="divide-y divide-white/20 p-0 border-white/40">
-                  <div className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      {settings.soundEnabled ? <Volume2 size={20} className="text-pink-500" /> : <VolumeX size={20} className="text-pink-300" />}
-                      <span className="font-semibold text-pink-900">Sound Effects</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const newS = { ...settings, soundEnabled: !settings.soundEnabled };
-                        setSettings(newS);
-                        StorageService.setSettings(newS);
-                      }}
-                      className={cn(
-                        "w-14 h-8 rounded-full transition-colors relative shadow-inner",
-                        settings.soundEnabled ? "bg-pink-500" : "bg-white/40"
-                      )}
-                    >
-                      <motion.div 
-                        animate={{ x: settings.soundEnabled ? 24 : 4 }}
-                        className="w-6 h-6 bg-white rounded-full absolute top-1 shadow-md" 
-                      />
-                    </button>
-                  </div>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Daily Content</h3>
+                <GlassCard className="p-0">
+                  <button
+                    onClick={() => {
+                      if (confirm("Refresh today's questions? This will generate new ones now! ❤️")) {
+                        StorageService.setDailyData(null as any);
+                        window.location.reload();
+                      }
+                    }}
+                    className="flex items-center gap-3 w-full p-4 text-pink-600 hover:bg-pink-50 transition-colors rounded-3xl"
+                  >
+                    <Sparkles size={20} />
+                    <span className="font-bold">Refresh Daily Questions</span>
+                  </button>
                 </GlassCard>
               </section>
 

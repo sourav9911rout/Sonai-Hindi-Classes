@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Question, QuizSet } from '../types';
 import { GlassCard } from './ui/GlassCard';
-import { Volume2, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { playSuccessSound, playErrorSound } from '../lib/utils';
 
 interface QuizViewProps {
   quizSet: QuizSet;
@@ -42,18 +43,22 @@ export function QuizView({ quizSet, onComplete }: QuizViewProps) {
 
     if (correct) {
       setScore(s => s + 1);
+      playSuccessSound();
       confetti({
         particleCount: 40,
         spread: 70,
         origin: { y: 0.6 },
         colors: ['#FFB6C1', '#FF6B6B', '#FFF0F5']
       });
+    } else {
+      playErrorSound();
     }
 
+    const delay = correct ? 1000 : 2000;
     setMotivationalMsg(motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)]);
     setTimeout(() => {
       setShowMotivational(true);
-    }, 600);
+    }, delay);
   };
 
   const handleNext = () => {
@@ -67,14 +72,19 @@ export function QuizView({ quizSet, onComplete }: QuizViewProps) {
     }
   };
 
-  const speak = (text: string) => {
-    const synth = window.speechSynthesis;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'hi-IN';
-    synth.speak(utter);
-  };
-
   const progress = ((currentIndex + 1) / quizSet.questions.length) * 100;
+
+  const formatCategory = (cat: string) => {
+    const mapping: Record<string, string> = {
+      'BengaliToHindi': 'বাংলা to हिन्दी',
+      'EnglishToHindi': 'English to हिन्दी',
+      'Vocabulary': 'শব্দ ভাণ্ডার',
+      'Grammar': 'ব্যাকরণ',
+      'Sentence': 'বাক্য',
+      'Conversation': 'কথোপকথন'
+    };
+    return mapping[cat] || cat.replace(/([A-Z])/g, ' $1').trim();
+  };
 
   return (
     <div className="flex flex-col h-full px-4 pt-4 pb-32 max-w-lg mx-auto">
@@ -103,17 +113,11 @@ export function QuizView({ quizSet, onComplete }: QuizViewProps) {
         >
           <GlassCard className="mb-6">
             <div className="flex justify-between items-start mb-4">
-              <span className="px-3 py-1 rounded-full bg-pink-500/10 text-pink-600 text-[10px] font-bold uppercase tracking-wider border border-pink-200/50">
-                {currentQuestion.category}
+              <span className="px-3 py-1 rounded-full bg-pink-500/10 text-pink-600 text-[10px] font-black uppercase tracking-widest border border-pink-200/50">
+                {formatCategory(currentQuestion.category)}
               </span>
-              <button 
-                onClick={() => speak(currentQuestion.question)}
-                className="p-2 rounded-full bg-romantic-pink/10 text-love-red hover:bg-romantic-pink/20"
-              >
-                <Volume2 size={20} />
-              </button>
             </div>
-            <h2 className="text-2xl font-display font-semibold text-gray-800 leading-snug">
+            <h2 className="text-xl font-display font-semibold text-gray-800 leading-snug">
               {currentQuestion.question}
             </h2>
           </GlassCard>

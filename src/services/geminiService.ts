@@ -7,25 +7,32 @@ export async function generateDailyQuestions(): Promise<Question[]> {
   const prompt = `
     Generate 100 romantic and beginner-friendly Hindi learning questions for a wife from her husband.
     The questions should be split into 6 categories:
-    1. Bengali to Hindi translation (Show Bengali word/sentence, ask for Hindi)
-    2. English to Hindi translation (Show English word/sentence, ask for Hindi)
-    3. Hindi vocabulary (Identify meanings or synonyms)
-    4. Beginner Hindi grammar (Gender, plural, basic verbs)
+    1. Bengali to Hindi translation (Bengali question -> Hindi options in Devanagari)
+    2. English to Hindi translation (English question -> Hindi options in Devanagari)
+    3. Hindi vocabulary (Word in Devanagari -> meaning)
+    4. Beginner Hindi grammar (Gender, plural, basic verbs in Devanagari)
     5. Simple Hindi sentence translation
     6. Daily conversational Hindi
 
-    IMPORTANT: Most questions and ALL Hindi options MUST be written in Devanagari script (Hindi script).
-    Example: Question: "What is 'I love you' in Hindi?", Options: ["मैं आपसे प्यार करता हूँ", "नमस्ते", "तुम कैसे हो", "अलविदा"]
+    CRITICAL SCRIPT REQUIREMENT (STRICTEST): 
+    - ALL Hindi words, phrases, and sentences MUST be written in DEVANAGARI SCRIPT (हिन्दी लिपि). 
+    - DO NOT EVER use English letters to write Hindi (no "Aanken", no "Pyaar", no "Tum"). 
+    - Use "आँखें", "प्यार", "तुम" etc.
+    - If a Hindi word is used in a question, an option, or the explanation, it MUST be in Devanagari script.
+    - Bengali words must be in Bengali script.
+    - Only use English for English-to-Hindi tasks or general instructions in the explanation.
+    - Ensure PERFECT grammar and spelling in all languages (English, Bengali, and Hindi).
+    - Absolutely NO grammatical errors in the "explanation" field.
 
     Each question must be an MCQ with 4 options.
     Format the output as a valid JSON array of objects with this structure:
     {
       "id": "unique_id_string",
-      "question": "The question text (Can be English/Bengali asking for Hindi, or Hindi asking for meaning)",
+      "question": "The question text",
       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
       "correctAnswer": "The exact string from the options array that is correct",
       "explanation": "A short, cute, and romantic explanation in Bengali or English",
-      "category": "One of: BengaliToHindi, EnglishToHindi, Vocabulary, Grammar, Sentence, Converstation"
+      "category": "One of: BengaliToHindi, EnglishToHindi, Vocabulary, Grammar, Sentence, Conversation"
     }
 
     The tone should be cute, romantic, and encouraging. Return ONLY the JSON array.
